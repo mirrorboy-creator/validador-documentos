@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validador de Documentos Académicos</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:      #2563eb;
+      --primary-dk:   #1d4ed8;
+      --success:      #16a34a;
+      --warning:      #d97706;
+      --danger:       #dc2626;
+      --bg:           #f1f5f9;
+      --card:         #ffffff;
+      --border:       #e2e8f0;
+      --text:         #1e293b;
+      --muted:        #64748b;
+      --radius:       12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+      color: #fff;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+    header h1 { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.5px; }
+    header p  { margin-top: .5rem; opacity: .85; font-size: .95rem; }
+
+    /* ── Layout ── */
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem 4rem; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+    .card h2 .badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: .7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* ── Drop zones ── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone .icon { font-size: 2.5rem; }
+    .drop-zone p { margin-top: .5rem; color: var(--muted); font-size: .9rem; }
+    .drop-zone strong { color: var(--primary); }
+
+    /* ── File list ── */
+    .file-list { margin-top: 1rem; display: flex; flex-direction: column; gap: .5rem; }
+    .file-item {
+      display: flex; align-items: center; gap: .6rem;
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: 6px; padding: .5rem .8rem; font-size: .85rem;
+    }
+    .file-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-item .remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--danger); font-size: 1rem; line-height: 1; padding: 0 4px;
+    }
+    .file-icon { font-size: 1.1rem; }
+
+    /* ── Button ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-size: 1rem; font-weight: 600; padding: .75rem 2rem;
+      transition: background .2s, transform .1s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dk); }
+    .btn-primary:active:not(:disabled) { transform: scale(.98); }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-block { width: 100%; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: none; width: 1.2rem; height: 1.2rem;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Loading overlay ── */
+    #loading {
+      display: none;
+      position: fixed; inset: 0; background: rgba(15,23,42,.55);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    #loading.active { display: flex; }
+    .loading-box {
+      background: #fff; border-radius: var(--radius);
+      padding: 2.5rem 3rem; text-align: center; max-width: 340px;
+    }
+    .loading-box .big-spinner {
+      width: 3.5rem; height: 3.5rem; border-width: 5px;
+      border-color: #dbeafe; border-top-color: var(--primary);
+      border-style: solid; border-radius: 50%;
+      animation: spin 1s linear infinite; margin: 0 auto 1.2rem;
+    }
+    .loading-box h3 { font-size: 1.1rem; margin-bottom: .4rem; }
+    .loading-box p  { color: var(--muted); font-size: .85rem; }
+
+    /* ── Results ── */
+    #results { display: none; }
+    #results.visible { display: block; }
+
+    /* ── Score ring ── */
+    .score-section {
+      display: flex; flex-direction: column; align-items: center;
+      gap: .5rem; padding: 1.5rem 0;
+    }
+    .ring-wrap { position: relative; width: 160px; height: 160px; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-wrap .ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 14; }
+    .ring-wrap .ring-fg { fill: none; stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 1.2s ease; }
+    .ring-label {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .ring-label .pct { font-size: 2.2rem; font-weight: 800; }
+    .ring-label .sublabel { font-size: .7rem; font-weight: 600; letter-spacing: .05em; }
+    .compliance-tag {
+      font-size: .85rem; font-weight: 700; letter-spacing: .06em;
+      padding: .3rem 1rem; border-radius: 999px;
+    }
+
+    /* ── Executive summary ── */
+    .summary-box {
+      background: #f8fafc; border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0; padding: 1rem 1.2rem;
+      font-size: .95rem; line-height: 1.65;
+    }
+
+    /* ── Section cards ── */
+    .section-card {
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 1rem; overflow: hidden;
+    }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .75rem 1rem; cursor: pointer; user-select: none;
+      gap: 1rem;
+    }
+    .section-header h3 { font-size: .95rem; font-weight: 600; flex: 1; }
+    .pct-badge {
+      font-size: .8rem; font-weight: 700; padding: .25rem .7rem;
+      border-radius: 999px; flex-shrink: 0;
+    }
+    .chevron { font-size: .8rem; color: var(--muted); transition: transform .2s; }
+    .section-header.open .chevron { transform: rotate(180deg); }
+
+    .progress-bar-wrap { height: 6px; background: #e2e8f0; }
+    .progress-bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
+
+    .section-body { padding: 1rem; display: none; border-top: 1px solid var(--border); }
+    .section-body.open { display: block; }
+    .section-body h4 { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin: .8rem 0 .4rem; color: var(--muted); }
+    .section-body h4:first-child { margin-top: 0; }
+    .obs-text { font-size: .9rem; line-height: 1.6; }
+    .item-list { list-style: none; display: flex; flex-direction: column; gap: .35rem; margin-top: .2rem; }
+    .item-list li { font-size: .87rem; display: flex; gap: .5rem; align-items: flex-start; }
+    .item-list li::before { flex-shrink: 0; font-size: .9rem; margin-top: .05rem; }
+    .item-list.strengths li::before { content: '✅'; }
+    .item-list.corrections li::before { content: '✏️'; }
+    .item-list.recs li::before { content: '💡'; }
+    .item-list.missing li::before { content: '⚠️'; }
+
+    /* ── Two-col layout ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── Colour helpers ── */
+    .c-green  { color: var(--success); }
+    .c-amber  { color: var(--warning); }
+    .c-red    { color: var(--danger); }
+    .bg-green { background: #dcfce7; }
+    .bg-amber { background: #fef3c7; }
+    .bg-red   { background: #fee2e2; }
+
+    /* ── Misc ── */
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    .mt1 { margin-top: 1rem; }
+    small.hint { color: var(--muted); font-size: .78rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎓 Validador de Documentos Académicos</h1>
+  <p>Sube tus lineamientos de referencia y el documento a evaluar — Claude analiza el cumplimiento.</p>
+</header>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="loading-box">
+    <div class="big-spinner"></div>
+    <h3>Analizando documento…</h3>
+    <p>Claude está revisando el contenido contra los lineamientos. Esto puede tardar hasta dos minutos.</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Upload form ── -->
+  <form id="analyzeForm" novalidate>
+
+    <!-- Reference files -->
+    <div class="card">
+      <h2>📚 Documentos de Referencia <span class="badge">Uno o más</span></h2>
+      <small class="hint">Syllabus, lineamientos, objetivos, rúbricas, etc. — PDF, DOCX o TXT.</small>
+
+      <div class="drop-zone mt1" id="refZone">
+        <input type="file" id="refInput" name="reference_files" multiple accept=".pdf,.docx,.txt" />
+        <div class="icon">📄</div>
+        <p><strong>Haz clic o arrastra archivos aquí</strong></p>
+        <p>PDF · DOCX · TXT</p>
+      </div>
+
+      <div class="file-list" id="refList"></div>
+    </div>
+
+    <!-- Evaluation file -->
+    <div class="card">
+      <h2>📝 Documento a Evaluar <span class="badge">Uno</span></h2>
+      <small class="hint">El trabajo, informe o documento cuyo cumplimiento deseas medir.</small>
+
+      <div class="drop-zone mt1" id="evalZone">
+        <input type="file" id="evalInput" name="eval_file" accept=".pdf,.docx,.txt" />
+        <div class="icon">🔍</div>
+        <p><strong>Haz clic o arrastra el archivo aquí</strong></p>
+        <p>PDF · DOCX · TXT</p>
+      </div>
+
+      <div class="file-list" id="evalList"></div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+      <span class="spinner" id="submitSpinner"></span>
+      <span id="submitText">🚀 Analizar Documento</span>
+    </button>
+
+  </form>
+
+  <!-- ── Results ── -->
+  <div id="results">
+    <hr class="section-divider" />
+
+    <!-- Score -->
+    <div class="card">
+      <div class="score-section">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 120 120" width="160" height="160">
+            <circle class="ring-bg" cx="60" cy="60" r="50" />
+            <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="50"
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16" />
+          </svg>
+          <div class="ring-label">
+            <span class="pct" id="ringPct">—</span>
+            <span class="sublabel" id="ringSubLabel">%</span>
+          </div>
+        </div>
+        <span class="compliance-tag" id="complianceTag">—</span>
+      </div>
+
+      <div class="summary-box" id="execSummary"></div>
+    </div>
+
+    <!-- Sections -->
+    <div class="card">
+      <h2>📋 Análisis por Secciones</h2>
+      <div id="sectionsContainer"></div>
+    </div>
+
+    <!-- Recommendations + missing -->
+    <div class="two-col">
+      <div class="card" id="recsCard" style="display:none">
+        <h2>💡 Recomendaciones Generales</h2>
+        <ul class="item-list recs" id="recsList"></ul>
+      </div>
+      <div class="card" id="missingCard" style="display:none">
+        <h2>⚠️ Elementos Faltantes</h2>
+        <ul class="item-list missing" id="missingList"></ul>
+      </div>
+    </div>
+
+    <!-- Download -->
+    <div class="card" style="text-align:center">
+      <h2 style="justify-content:center">📥 Reporte Detallado</h2>
+      <p style="color:var(--muted); margin-bottom:1rem; font-size:.9rem;">
+        Descarga el documento Word con las observaciones y comentarios integrados.
+      </p>
+      <a id="downloadBtn" class="btn btn-success" href="#" target="_blank">
+        ⬇️ Descargar Reporte Word (.docx)
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── File handling ────────────────────────────────────────────────────────────
+const EXT_ICONS = { pdf: '📕', docx: '📘', doc: '📘', txt: '📄' };
+
+function fileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return EXT_ICONS[ext] || '📄';
+}
+
+function renderFileList(files, listEl, removeFn) {
+  listEl.innerHTML = '';
+  files.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `
+      <span class="file-icon">${fileIcon(f.name)}</span>
+      <span class="name" title="${f.name}">${f.name}</span>
+      <small style="color:var(--muted)">${(f.size/1024).toFixed(1)} KB</small>
+      <button class="remove" title="Quitar" data-idx="${i}">✕</button>`;
+    div.querySelector('.remove').addEventListener('click', () => removeFn(i));
+    listEl.appendChild(div);
+  });
+}
+
+function setupDropZone(zoneId, inputId, listId, multiple) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  let files = [];
+
+  function update() { renderFileList(files, list, (i) => { files.splice(i,1); update(); }); }
+
+  function addFiles(newFiles) {
+    if (multiple) {
+      const unique = [...newFiles].filter(f => !files.some(e => e.name === f.name && e.size === f.size));
+      files = [...files, ...unique];
+    } else {
+      files = [newFiles[0]];
+    }
+    update();
+  }
+
+  input.addEventListener('change', () => { if (input.files.length) addFiles(input.files); input.value=''; });
+
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+
+  return { getFiles: () => files };
+}
+
+const refHandler  = setupDropZone('refZone',  'refInput',  'refList',  true);
+const evalHandler = setupDropZone('evalZone', 'evalInput', 'evalList', false);
+
+// ── Form submit ──────────────────────────────────────────────────────────────
+document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const refFiles  = refHandler.getFiles();
+  const evalFiles = evalHandler.getFiles();
+
+  if (!refFiles.length)  { alert('Por favor sube al menos un documento de referencia.'); return; }
+  if (!evalFiles.length) { alert('Por favor sube el documento a evaluar.'); return; }
+
+  const formData = new FormData();
+  refFiles.forEach(f => formData.append('reference_files', f));
+  formData.append('eval_file', evalFiles[0]);
+
+  // Show loading
+  document.getElementById('loading').classList.add('active');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitSpinner').style.display = 'block';
+  document.getElementById('submitText').textContent = 'Analizando…';
+  document.getElementById('results').classList.remove('visible');
+
+  try {
+    const res = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      alert('Error: ' + (data.detail || data.message || 'Algo salió mal.'));
+      return;
+    }
+
+    renderResults(data.analysis, data.report_filename);
+    document.getElementById('results').classList.add('visible');
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    alert('Error de red: ' + err.message);
+  } finally {
+    document.getElementById('loading').classList.remove('active');
+    btn.disabled = false;
+    document.getElementById('submitSpinner').style.display = 'none';
+    document.getElementById('submitText').textContent = '🚀 Analizar Documento';
+  }
+});
+
+// ── Render results ────────────────────────────────────────────────────────────
+function complianceTheme(pct) {
+  if (pct >= 80) return { color: '#16a34a', cls: 'c-green', bgCls: 'bg-green', label: 'ALTO CUMPLIMIENTO' };
+  if (pct >= 60) return { color: '#d97706', cls: 'c-amber', bgCls: 'bg-amber', label: 'CUMPLIMIENTO MODERADO' };
+  if (pct >= 40) return { color: '#ea580c', cls: 'c-amber', bgCls: 'bg-amber', label: 'CUMPLIMIENTO BAJO' };
+  return          { color: '#dc2626', cls: 'c-red',   bgCls: 'bg-red',   label: 'CUMPLIMIENTO INSUFICIENTE' };
+}
+
+function renderResults(analysis, reportFilename) {
+  const overall = analysis.overall_compliance ?? 0;
+  const theme   = complianceTheme(overall);
+
+  // Ring
+  const circumference = 2 * Math.PI * 50; // r=50
+  const offset = circumference * (1 - overall / 100);
+  const ring = document.getElementById('ringFg');
+  ring.style.stroke = theme.color;
+  // Animate
+  setTimeout(() => { ring.style.strokeDashoffset = offset; }, 50);
+
+  document.getElementById('ringPct').textContent     = overall;
+  document.getElementById('ringPct').className       = 'pct ' + theme.cls;
+  document.getElementById('ringSubLabel').textContent = '%';
+
+  const tag = document.getElementById('complianceTag');
+  tag.textContent = theme.label;
+  tag.className   = 'compliance-tag ' + theme.cls + ' ' + theme.bgCls;
+
+  // Executive summary
+  document.getElementById('execSummary').textContent = analysis.executive_summary || '';
+
+  // Sections
+  const container = document.getElementById('sectionsContainer');
+  container.innerHTML = '';
+  (analysis.sections || []).forEach((sec, idx) => {
+    const pct  = sec.compliance_percentage ?? 0;
+    const t    = complianceTheme(pct);
+    const div  = document.createElement('div');
+    div.className = 'section-card';
+    div.innerHTML = `
+      <div class="section-header" id="sh${idx}">
+        <h3>${sec.section_name || 'Sección ' + (idx+1)}</h3>
+        <span class="pct-badge ${t.cls} ${t.bgCls}">${pct}%</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width:0%;background:${t.color}" data-target="${pct}"></div>
+      </div>
+      <div class="section-body" id="sb${idx}">
+        <h4>Observaciones</h4>
+        <p class="obs-text">${sec.observations || '—'}</p>
+
+        ${(sec.strengths||[]).length ? `
+          <h4>Fortalezas</h4>
+          <ul class="item-list strengths">${(sec.strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+        ` : ''}
+
+        ${(sec.corrections||[]).length ? `
+          <h4>Correcciones Requeridas</h4>
+          <ul class="item-list corrections">${(sec.corrections||[]).map(c=>`<li>${c}</li>`).join('')}</ul>
+        ` : ''}
+      </div>`;
+
+    container.appendChild(div);
+
+    // Toggle accordion
+    div.querySelector(`#sh${idx}`).addEventListener('click', () => {
+      const body = div.querySelector(`#sb${idx}`);
+      const hdr  = div.querySelector(`#sh${idx}`);
+      body.classList.toggle('open');
+      hdr.classList.toggle('open');
+    });
+
+    // Animate progress bar after paint
+    setTimeout(() => {
+      const bar = div.querySelector('.progress-bar-fill');
+      bar.style.width = bar.dataset.target + '%';
+    }, 100 + idx * 80);
+
+    // Open first section by default
+    if (idx === 0) {
+      div.querySelector(`#sb${idx}`).classList.add('open');
+      div.querySelector(`#sh${idx}`).classList.add('open');
+    }
+  });
+
+  // Recommendations
+  const recs = analysis.general_recommendations || [];
+  const recsCard = document.getElementById('recsCard');
+  const recsList = document.getElementById('recsList');
+  if (recs.length) {
+    recsList.innerHTML = recs.map(r => `<li>${r}</li>`).join('');
+    recsCard.style.display = '';
+  } else { recsCard.style.display = 'none'; }
+
+  // Missing elements
+  const missing = analysis.missing_elements || [];
+  const missingCard = document.getElementById('missingCard');
+  const missingList = document.getElementById('missingList');
+  if (missing.length) {
+    missingList.innerHTML = missing.map(m => `<li>${m}</li>`).join('');
+    missingCard.style.display = '';
+  } else { missingCard.style.display = 'none'; }
+
+  // Download button
+  document.getElementById('downloadBtn').href = `/download/${encodeURIComponent(reportFilename)}`;
+}
+</script>
+
+</body>
+</html>
