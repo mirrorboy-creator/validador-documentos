@@ -3,7 +3,7 @@
 import shutil
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import aiofiles
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
@@ -105,7 +105,7 @@ async def download_report(filename: str) -> FileResponse:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _validate_extension(filename: str | None) -> None:
+def _validate_extension(filename: Optional[str]) -> None:
     if not filename:
         raise HTTPException(400, "Nombre de archivo vacío.")
     ext = Path(filename).suffix.lower()
