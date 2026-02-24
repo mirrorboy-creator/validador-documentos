@@ -270,3 +270,76 @@ def generate_word_report(
     footer.runs[0].font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
 
     doc.save(output_path)
+
+
+# ── Corrected document ─────────────────────────────────────────────────────────
+
+def _add_markdown_content(doc: Document, text: str) -> None:
+    """Parse lightweight markdown (# headings, - bullets) and add to document."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("### "):
+            doc.add_heading(stripped[4:], level=3)
+        elif stripped.startswith("## "):
+            doc.add_heading(stripped[3:], level=2)
+        elif stripped.startswith("# "):
+            doc.add_heading(stripped[2:], level=1)
+        elif stripped.startswith(("- ", "* ")):
+            p = doc.add_paragraph(style="List Bullet")
+            p.add_run(stripped[2:])
+        elif stripped:
+            doc.add_paragraph(stripped)
+
+
+def generate_corrected_docx(
+    corrected_text: str,
+    eval_filename: str,
+    output_path: Path,
+) -> None:
+    """Create a Word document from the AI-corrected text."""
+    doc = Document()
+
+    for style_name in ("Normal", "List Bullet", "List Number"):
+        try:
+            style = doc.styles[style_name]
+            style.font.name = "Calibri"
+            style.font.size = Pt(11)
+        except KeyError:
+            pass
+
+    now = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    # ── Cover ────────────────────────────────────────────────────────────────
+    cover_title = doc.add_heading("DOCUMENTO CORREGIDO", 0)
+    cover_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    sub = doc.add_paragraph()
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub.add_run("Versión con correcciones aplicadas · Claude Opus 4").italic = True
+
+    doc.add_paragraph()
+
+    meta = doc.add_paragraph()
+    meta.add_run("Documento original: ").bold = True
+    meta.add_run(eval_filename)
+
+    meta2 = doc.add_paragraph()
+    meta2.add_run("Fecha de corrección: ").bold = True
+    meta2.add_run(now)
+
+    doc.add_paragraph()
+    notice = doc.add_paragraph()
+    notice_run = notice.add_run(
+        "AVISO: Este documento fue generado automáticamente por IA con las correcciones "
+        "sugeridas por el evaluador. Revise el contenido antes de su uso definitivo."
+    )
+    notice_run.italic = True
+    notice_run.font.size = Pt(9)
+    notice_run.font.color.rgb = _AMBER
+
+    doc.add_page_break()
+
+    # ── Corrected content ────────────────────────────────────────────────────
+    _add_markdown_content(doc, corrected_text)
+
+    doc.save(output_path)

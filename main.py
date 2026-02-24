@@ -10,9 +10,9 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from utils.analyzer import analyze_document
+from utils.analyzer import analyze_document, generate_corrected_document
 from utils.file_processor import extract_text
-from utils.report_generator import generate_word_report
+from utils.report_generator import generate_corrected_docx, generate_word_report
 
 # ── App setup ──────────────────────────────────────────────────────────────────
 app = FastAPI(title="Validador de Documentos Académicos")
@@ -67,11 +67,23 @@ async def analyze(
         report_path = REPORTS_DIR / report_name
         generate_word_report(analysis, eval_file.filename, report_path)
 
+        # ── Generate corrected document ───────────────────────────────────────
+        corrected_name = None
+        try:
+            corrected_text = await generate_corrected_document(
+                eval_text, eval_file.filename, analysis
+            )
+            corrected_name = f"corregido_{session_id[:8]}.docx"
+            generate_corrected_docx(corrected_text, eval_file.filename, REPORTS_DIR / corrected_name)
+        except Exception:
+            corrected_name = None  # Non-fatal: report is still available
+
         return JSONResponse(
             {
                 "success": True,
                 "analysis": analysis,
                 "report_filename": report_name,
+                "corrected_filename": corrected_name,
             }
         )
 
