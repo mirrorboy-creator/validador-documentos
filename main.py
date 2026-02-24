@@ -23,7 +23,7 @@ REPORTS_DIR = Path("reports")
 UPLOAD_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".xlsx", ".xls"}
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
