@@ -118,3 +118,96 @@ async def analyze_document(
     return await asyncio.to_thread(
         _sync_analyze, reference_texts, eval_text, eval_filename
     )
+
+
+# ── Corrected document generation ─────────────────────────────────────────────
+
+_CORRECTION_SYSTEM = (
+    "Eres un editor experto de documentos académicos. "
+    "Recibirás un documento original junto con correcciones específicas identificadas por un evaluador. "
+    "Tu tarea es reescribir el documento completo con TODAS las correcciones aplicadas, "
+    "preservando la estructura, tono y estilo académico del original."
+)
+
+
+def _build_correction_prompt(
+    eval_text: str,
+    eval_filename: str,
+    analysis: dict[str, Any],
+) -> str:
+    corrections_text = ""
+    for sec in analysis.get("sections", []):
+        corrections = sec.get("corrections", [])
+        if corrections:
+            corrections_text += f"\nEn la sección '{sec.get('section_name', '')}' :\n"
+            for c in corrections:
+                corrections_text += f"  - {c}\n"
+
+    missing = analysis.get("missing_elements", [])
+    if missing:
+        corrections_text += "\nElementos que deben agregarse al documento:\n"
+        for elem in missing:
+            corrections_text += f"  - {elem}\n"
+
+    recs = analysis.get("general_recommendations", [])
+    if recs:
+        corrections_text += "\nRecomendaciones generales a incorporar:\n"
+        for rec in recs:
+            corrections_text += f"  - {rec}\n"
+
+    return f"""Reescribe el documento académico a continuación aplicando TODAS las correcciones listadas.
+
+═══════════════════════════════════════
+DOCUMENTO ORIGINAL: {eval_filename}
+═══════════════════════════════════════
+{eval_text}
+
+═══════════════════════════════════════
+CORRECCIONES A APLICAR
+═══════════════════════════════════════
+{corrections_text}
+
+═══════════════════════════════════════
+INSTRUCCIONES DE FORMATO
+═══════════════════════════════════════
+1. Devuelve el documento corregido completo.
+2. Usa # para el título principal, ## para secciones y ### para subsecciones.
+3. Usa - para listas con viñetas.
+4. Preserva el contenido correcto del original; modifica solo lo que indican las correcciones.
+5. Mantén tono y estilo académico.
+6. Al final, agrega la sección ## CAMBIOS REALIZADOS con una lista de cada cambio aplicado.
+7. Devuelve ÚNICAMENTE el texto del documento. Sin preámbulos ni comentarios."""
+
+
+def _sync_generate_corrected(
+    eval_text: str,
+    eval_filename: str,
+    analysis: dict[str, Any],
+) -> str:
+    client = anthropic.Anthropic()
+    prompt = _build_correction_prompt(eval_text, eval_filename, analysis)
+
+    with client.messages.stream(
+        model="claude-opus-4-6",
+        max_tokens=16000,
+        thinking={"type": "adaptive"},
+        system=_CORRECTION_SYSTEM,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        final_message = stream.get_final_message()
+
+    for block in final_message.content:
+        if block.type == "text":
+            return block.text
+    return ""
+
+
+async def generate_corrected_document(
+    eval_text: str,
+    eval_filename: str,
+    analysis: dict[str, Any],
+) -> str:
+    """Generate a corrected version of the document with all suggested corrections applied."""
+    return await asyncio.to_thread(
+        _sync_generate_corrected, eval_text, eval_filename, analysis
+    )

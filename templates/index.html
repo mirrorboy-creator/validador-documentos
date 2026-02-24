@@ -324,13 +324,25 @@
 
     <!-- Download -->
     <div class="card" style="text-align:center">
-      <h2 style="justify-content:center">📥 Reporte Detallado</h2>
-      <p style="color:var(--muted); margin-bottom:1rem; font-size:.9rem;">
-        Descarga el documento Word con las observaciones y comentarios integrados.
-      </p>
-      <a id="downloadBtn" class="btn btn-success" href="#" target="_blank">
-        ⬇️ Descargar Reporte Word (.docx)
-      </a>
+      <h2 style="justify-content:center">📥 Descargas</h2>
+      <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-top:.5rem">
+        <div style="flex:1; min-width:220px; max-width:340px">
+          <p style="color:var(--muted); margin-bottom:.75rem; font-size:.85rem;">
+            Reporte con observaciones, porcentajes y comentarios por sección.
+          </p>
+          <a id="downloadBtn" class="btn btn-success" style="width:100%" href="#" target="_blank">
+            ⬇️ Descargar Reporte Word
+          </a>
+        </div>
+        <div id="correctedWrap" style="flex:1; min-width:220px; max-width:340px; display:none">
+          <p style="color:var(--muted); margin-bottom:.75rem; font-size:.85rem;">
+            Versión del documento con todas las correcciones ya aplicadas.
+          </p>
+          <a id="correctedBtn" class="btn btn-primary" style="width:100%" href="#" target="_blank">
+            ⬇️ Descargar Documento Corregido
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -425,7 +437,7 @@ document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
       return;
     }
 
-    renderResults(data.analysis, data.report_filename);
+    renderResults(data.analysis, data.report_filename, data.corrected_filename);
     document.getElementById('results').classList.add('visible');
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
 
@@ -447,7 +459,7 @@ function complianceTheme(pct) {
   return          { color: '#dc2626', cls: 'c-red',   bgCls: 'bg-red',   label: 'CUMPLIMIENTO INSUFICIENTE' };
 }
 
-function renderResults(analysis, reportFilename) {
+function renderResults(analysis, reportFilename, correctedFilename) {
   const overall = analysis.overall_compliance ?? 0;
   const theme   = complianceTheme(overall);
 
@@ -543,8 +555,16 @@ function renderResults(analysis, reportFilename) {
     missingCard.style.display = '';
   } else { missingCard.style.display = 'none'; }
 
-  // Download button
+  // Download buttons
   document.getElementById('downloadBtn').href = `/download/${encodeURIComponent(reportFilename)}`;
+
+  const correctedWrap = document.getElementById('correctedWrap');
+  if (correctedFilename) {
+    document.getElementById('correctedBtn').href = `/download/${encodeURIComponent(correctedFilename)}`;
+    correctedWrap.style.display = '';
+  } else {
+    correctedWrap.style.display = 'none';
+  }
 }
 </script>
 
