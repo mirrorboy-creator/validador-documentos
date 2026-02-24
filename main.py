@@ -112,7 +112,7 @@ def _validate_extension(filename: Optional[str]) -> None:
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             400,
-            f"Formato '{ext}' no soportado. Use PDF, DOCX o TXT.",
+            f"Formato '{ext}' no soportado. Use PDF, DOCX, TXT, XLSX o XLS.",
         )
 
 
