@@ -8,8 +8,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary:      #2563eb;
-      --primary-dk:   #1d4ed8;
+      --primary:      #F03E5F;
+      --primary-dk:   #d9284a;
       --success:      #16a34a;
       --warning:      #d97706;
       --danger:       #dc2626;
@@ -30,13 +30,15 @@
 
     /* ── Header ── */
     header {
-      background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
-      color: #fff;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
       padding: 2rem 1rem;
       text-align: center;
     }
-    header h1 { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.5px; }
-    header p  { margin-top: .5rem; opacity: .85; font-size: .95rem; }
+    header img.logo { height: 36px; margin-bottom: 1rem; }
+    header h1 { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 800; letter-spacing: -0.5px; color: #111827; }
+    header .by-griky { margin-top: .25rem; font-size: 1rem; font-weight: 600; color: #F03E5F; }
+    header p.desc { margin-top: .5rem; color: #6b7280; font-size: .9rem; }
 
     /* ── Layout ── */
     .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem 4rem; }
@@ -71,7 +73,7 @@
     }
     .drop-zone:hover, .drop-zone.drag-over {
       border-color: var(--primary);
-      background: #eff6ff;
+      background: #fff0f3;
     }
     .drop-zone input[type="file"] {
       position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
@@ -132,7 +134,7 @@
     }
     .loading-box .big-spinner {
       width: 3.5rem; height: 3.5rem; border-width: 5px;
-      border-color: #dbeafe; border-top-color: var(--primary);
+      border-color: #fce7ec; border-top-color: var(--primary);
       border-style: solid; border-radius: 50%;
       animation: spin 1s linear infinite; margin: 0 auto 1.2rem;
     }
@@ -165,7 +167,7 @@
 
     /* ── Executive summary ── */
     .summary-box {
-      background: #f8fafc; border-left: 4px solid var(--primary);
+      background: #fff8f9; border-left: 4px solid var(--primary);
       border-radius: 0 8px 8px 0; padding: 1rem 1.2rem;
       font-size: .95rem; line-height: 1.65;
     }
@@ -225,8 +227,10 @@
 <body>
 
 <header>
-  <h1>🎓 Validador de Documentos Académicos</h1>
-  <p>Sube tus lineamientos de referencia y el documento a evaluar — Claude analiza el cumplimiento.</p>
+  <img class="logo" src="https://cdn.prod.website-files.com/6414d7e92e8c94737b3d28c1/65f9b59ac7c7064712804df7_Logo%20griky.svg" alt="Griky" />
+  <h1>Validador de Documentos Académicos</h1>
+  <p class="by-griky">by Griky</p>
+  <p class="desc">Sube tus lineamientos de referencia y el documento a evaluar — Claude analiza el cumplimiento.</p>
 </header>
 
 <!-- Loading overlay -->
